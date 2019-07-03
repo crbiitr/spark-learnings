@@ -9,9 +9,7 @@ import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.kafka010.ConsumerStrategies;
-import org.apache.spark.streaming.kafka010.KafkaUtils;
-import org.apache.spark.streaming.kafka010.LocationStrategies;
+import org.apache.spark.streaming.kafka010.*;
 import scala.Tuple2;
 
 import java.util.Arrays;
@@ -32,7 +30,7 @@ public class ConsumeKafkaTopicUsingDStream {
 
         // Spark Configs
         SparkConf sparkConf = new SparkConf().setAppName("integrationTestingWithKafka").setMaster("local[*]");
-        JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, Durations.seconds(1));
+        JavaStreamingContext streamingContext = new JavaStreamingContext(sparkConf, Durations.seconds(5));
 
         // Kafka configs
         Map<String, Object> kafkaParams = new HashMap<>();
@@ -44,7 +42,7 @@ public class ConsumeKafkaTopicUsingDStream {
         kafkaParams.put("auto.offset.reset", "earliest");
         kafkaParams.put("enable.auto.commit", false);
 
-        Collection<String> topics = Arrays.asList("com.spark.test");
+        Collection<String> topics = Arrays.asList("com.spark.test", "com.spark.test2");
 
         JavaInputDStream<ConsumerRecord<String, String>> stream = KafkaUtils.createDirectStream(streamingContext, LocationStrategies.PreferConsistent(), ConsumerStrategies.Subscribe(topics, kafkaParams));
 
@@ -57,13 +55,28 @@ public class ConsumeKafkaTopicUsingDStream {
                 .mapToPair(item -> item.swap())
                 .transformToPair(rdd -> rdd.sortByKey());*/
 
-        JavaPairDStream<Long, String> results = stream.mapToPair((item -> new Tuple2<>(item.value(), 5L)))
-                .reduceByKeyAndWindow((x, y) -> x + y)
+        /*JavaPairDStream<Long, String> results = stream.mapToPair((item -> new Tuple2<>(item.value(), 5L)))
+                .reduceByKey((x, y) -> x + y)
                 .mapToPair(item -> item.swap())
-                .transformToPair(rdd -> rdd.sortByKey());
+                .transformToPair(rdd -> rdd.sortByKey());*/
+
+
+
+
+    /*    stream.foreachRDD(rdd -> {
+                OffsetRange[] offsetRanges = ((HasOffsetRanges) rdd.rdd()).offsetRanges();
+            System.out.println("========>" + stream.filter(
+                    stringStringConsumerRecord -> stringStringConsumerRecord.topic().equals("com.spark.test")
+            ));
+        // some time later, after outputs have completed
+        ((CanCommitOffsets) stream.inputDStream()).commitAsync(offsetRanges);
+        });*/
+
+
+        JavaPairDStream<String, Long> results = stream.mapToPair((item -> new Tuple2<>(item.topic(), 1L)))
+                .reduceByKey((x, y) -> x + y);
 
         results.print();
-
 
         streamingContext.start();
         streamingContext.awaitTermination();

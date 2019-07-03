@@ -33,9 +33,11 @@ public class DataProducerForTesting {
         // The input file contains a full day (24 hours) of viewing figures. We'll speed this up
         // by 24x to give a one hour simulation....
         Producer<String, String> producer = new KafkaProducer<>(props);
+        Producer<String, String> producer2 = new KafkaProducer<>(props);
 
         Scanner sc = new Scanner(new FileReader("src/main/resources/final_viewing_figures"));
         int milliseconds = 0;
+        Long i = 0L;
         while (sc.hasNextLine())
         {
             String[] input = sc.nextLine().split(",");
@@ -53,6 +55,7 @@ public class DataProducerForTesting {
 
             String courseName = courseKeys.get(courseKey);
             producer.send(new ProducerRecord<String, String>("com.spark.test", courseName));
+            producer2.send(new ProducerRecord<>("com.spark.test2",  "" + i++));
         }
         sc.close();
         producer.close();
